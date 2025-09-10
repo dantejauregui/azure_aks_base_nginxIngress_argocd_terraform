@@ -81,7 +81,7 @@ kubectl --kubeconfig ~/.kube/aks-dev get nodes        # just as sanity check
 ### PART3: Run Terraform again with the flag to enable the NGINX INGRESS installation:
 Now that the Cluster is created and the AKS context is into your dedicated kubeconfig file, install through Terraform the software:
 ```
-terraform apply -var="install_helmcharts=true" -var="dns_label=dant874563"
+terraform apply -var="install_helmcharts=true"
 ```
 *due to a bug, you may need you apply this command twice.
 
@@ -98,3 +98,19 @@ If you wanna use K9S, you have can run the program using a custom kubeconfig (in
 ```
 k9s --kubeconfig ~/.kube/aks-dev
 ```
+
+
+## ArgoCD first steps:
+To access ArgoCD you have to add in your local `/etc/hosts` the IP that terraform outputs and the `host url`, it normally you will write this line in this structure: 
+```
+< TERRAFORM-OUTPUT-IP >   http://argocd.aks-terraform.westeurope.cloudapp.azure.com/applications
+
+```
+
+Once you access the ARGO CD login screen you have to run this command to get the `initial admin password`:
+```
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+And for the User in the ArgoCD login page write the standard value: `admin`
