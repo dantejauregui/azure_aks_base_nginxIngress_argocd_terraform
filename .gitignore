@@ -1,0 +1,40 @@
+# Local .terraform directories
+**/.terraform/
+.terraform.lock.hcl
+
+# Terraform plan/output files
+*.tfplan
+*.tfstate
+*.tfstate.backup
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive or generated files
+secrets.auto.tfvars
+*.auto.tfvars
+*.auto.tfvars.json
+#terraform.tfvars
+terraform.tfvars.json
+
+# Ignore kube config if generated locally
+.kube/
+*.kubeconfig
+*.kubeconfig.*
+
+# IDE/editor junk
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Azure DevOps artifacts
+*.azure-pipelines.yml~
