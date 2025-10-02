@@ -32,7 +32,10 @@ az account set --subscription <AZURE-SUBSCRIPTION-NUMBER>
 ### AKS Kubeconfig file:
 We can create a separate Kubeconfig file for this new AKS Cluster (in this example I call the Kubeconfig file `aks-dev`), in order to add some order.
 
-So every time you want to use this specific kubeconfig file you have to export it in the console using `export KUBECONFIG=~/.kube/aks-dev`.
+So every time you want to use this specific kubeconfig file you have to export it in the console using:
+```
+export KUBECONFIG=~/.kube/aks-dev
+```
 
 Finally, to verify you are in the right kubeconfig, check it using this command:
 ```
@@ -71,14 +74,11 @@ az aks get-credentials \
 kubectl --kubeconfig ~/.kube/aks-dev get nodes        # just as sanity check
 ```
 
-### PART3: Run Terraform again with the flag to enable Infrastructure Applications:
+### PART3: Run Terraform again with the flag to enable Infrastructure Applications (Nginx Ingress & ArgoCD):
 Now that the Cluster is created and the AKS context is into your dedicated kubeconfig file, install through Terraform the Infrastructure Applications:
 ```
 terraform apply -var="install_helmcharts=true"
 ```
-
-
-
 
 
 
@@ -90,7 +90,7 @@ k9s --kubeconfig ~/.kube/aks-dev
 
 
 
-## Login to ArgoCD:
+## Login to ArgoCD application:
 To access ArgoCD you have to add in your local `/etc/hosts` the `ingress_nginx_external_IP` that terraform outputs and the `host url`, it normally you will write this line in this structure: 
 ```
 <TERRAFORM-OUTPUT-IP>     argocd.aks-terraform.westeurope.cloudapp.azure.com/applications
@@ -109,15 +109,91 @@ And for the User in the ArgoCD login page write the default value: `admin`
 
 
 
-## Deploying using Helmcharts (no OCI) into ArgoCD:
+## Deploying using Helmcharts (no OCI) into ArgoCD (Example, installing WORDPRESS):
 To start deploying fast we use this Helmcharts (avoid Bitnami charts): https://artifacthub.io/
 Please refer this good youtuber videoguide:  https://youtu.be/m6e0WvkR4fY?si=kuecDmIU9-LTAi9k&t=274
 
-Notice that the images inside those Helmcharts may not be found (I found some bugs in those helmcharts)
+### Add the repository using Argocd UI:
+In Settings > Repositories > Connect Repo, fill these values:
+- Type: Helm
+- Name: groundhog2k
+- URL: https://groundhog2k.github.io/helm-charts/
+
+
+### Create the app "as YAML code" option using ArgoCD UI:
+To avoid Argocd UI bugs, better add the YAML code and create the app. For example for WORDPRESS the yaml code is:
+```
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wordpress
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://groundhog2k.github.io/helm-charts/
+    chart: wordpress
+    targetRevision: 0.14.3   # pick a stable version from the repo
+    helm:
+      releaseName: wordpress
+      values: |
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            kubernetes.io/ingress.class: nginx
+            nginx.ingress.kubernetes.io/rewrite-target: /
+          hosts:
+            - host: wordpress.aks-terraform.westeurope.cloudapp.azure.com   #verify this
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - wordpress.aks-terraform.westeurope.cloudapp.azure.com
+              secretName: wordpress-tls
+
+        service:
+          type: ClusterIP
+
+        persistence:
+          enabled: true
+          storageClass: managed-csi
+          accessModes: ["ReadWriteOnce"]
+          size: 10Gi
+
+        mariadb:
+          enabled: true
+          settings:
+            rootPassword: "SuperStrongRoot123!"
+          userDatabase:
+            name: wordpress
+            user: wp  
+            password: "SuperStrongApp123!"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wordpress
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+
+Finally, due to Ingress changes were added in the yaml code above, to access in the browser to Wordpress as part of this example, you need to add an extra line in your /etc/hosts file:
+```
+<TERRAFORM-OUTPUT-IP>     wordpress.aks-terraform.westeurope.cloudapp.azure.com/applications
+
+```
 
 
 
-## Deploying apps using OCI from Artifacthub.io into ARGOCD:
+## Deploying apps using OCI from Artifacthub.io into ARGOCD (Example, installing REDIS):
 ### Enabling the use of OCI in ArgoCD
 First you need to enable the use of OCI in ArgoCD adding in its configmap using this command 
 ```
@@ -187,14 +263,22 @@ spec:
 
 
 ## TERRAFORM DESTROY correctly:
-Is better if you delete all your apps using Argocd, before Terraform destroy.
-Also in case you use argocd CLI, please Logout first, using:
+- Is better if you delete all your apps using Argocd UI, before Terraform destroy.
+
+
+- Also in case you use argocd CLI, please Logout first, using:
 ```
 argocd logout argocd.aks-prod.eastus.cloudapp.azure.com
 ```
 
-After the previous points are closed, finally destroy your provisionated infrastructure using:
+
+- After the previous points are closed, finally destroy your provisionated infrastructure using:
 ```
 terraform destroy -var="install_helmcharts=true"
 ```
 
+
+
+# TO-DO:
+- Enable using terraform code Prometheus & Grafana option for AKS
+- Explore more top ADD-ONs for AKS
