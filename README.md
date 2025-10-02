@@ -111,7 +111,8 @@ And for the User in the ArgoCD login page write the default value: `admin`
 
 ## Deploying using Helmcharts (no OCI) into ArgoCD (Example, installing WORDPRESS):
 To start deploying fast we use this Helmcharts (avoid Bitnami charts): https://artifacthub.io/
-Please refer this good youtuber videoguide:  https://youtu.be/m6e0WvkR4fY?si=kuecDmIU9-LTAi9k&t=274
+
+And please refer this good youtuber videoguide:  https://youtu.be/m6e0WvkR4fY?si=kuecDmIU9-LTAi9k&t=274
 
 ### Add the repository using Argocd UI:
 In Settings > Repositories > Connect Repo, fill these values:
