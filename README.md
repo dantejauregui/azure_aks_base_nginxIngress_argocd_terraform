@@ -280,5 +280,6 @@ terraform destroy -var="install_helmcharts=true"
 
 
 # TO-DO:
+- Modularize Terraform project
 - Enable using terraform code Prometheus & Grafana option for AKS
 - Explore more top ADD-ONs for AKS
